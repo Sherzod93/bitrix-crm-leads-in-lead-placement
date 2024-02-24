@@ -1,0 +1,66 @@
+<?php  
+
+require_once($_SERVER['DOCUMENT_ROOT'] . "/bitrix/modules/main/include/prolog_before.php");
+
+if (!CModule::IncludeModule('crm') || !CCrmSecurityHelper::IsAuthorized())
+{
+    die();
+}
+
+$APPLICATION->ShowHead();
+if($options = $_REQUEST["PLACEMENT_OPTIONS"]){
+    $options = json_decode($options,1);
+}
+$CCrmLead = new CCrmLead();
+
+$leadData=$CCrmLead->GetById($options["ID"]);
+$Params = [
+    "LEAD_COUNT" => 20,
+    "PATH_TO_LEAD_SHOW" =>"/crm/lead/show/#lead_id#/",
+    "PATH_TO_LEAD_EDIT" => "/crm/lead/edit/#lead_id#/",
+    "INTERNAL_FILTER" => [
+        "!ID"=>$options["ID"],
+        "CONTACT_ID" => $leadData["CONTACT_ID"],
+    ],
+    
+    "INTERNAL_CONTEXT" => Array
+    (
+        "LEAD_ID" => $options["ID"]
+    ),
+    
+    "GRID_ID_SUFFIX" => "LEAD_DETAILS",
+    "TAB_ID" => "tab_lead",
+    "NAME_TEMPLATE" =>"",
+    "ENABLE_TOOLBAR" => false,
+    "PRESERVE_HISTORY" => true,
+    //"ADD_EVENT_NAME" => "CrmCreateLeadFromContact"
+];
+$componentData = \CCrmInstantEditorHelper::signComponentParams(
+    $Params,
+    'crm.lead.list'
+    );
+
+
+$ajaxLoaderParams = array(
+    'url' => '/bitrix/components/bitrix/crm.lead.list/lazyload.ajax.php?&site='.SITE_ID.'&'.bitrix_sessid_get(),
+    'method' => 'POST',
+    'dataType' => 'ajax',
+    'data' => array('PARAMS' => ["template"=>"","signedParameters"=>$componentData,"TAB_ID"=>"tab_lead"])
+);
+
+$componentParams  = $Params;
+$componentParams['AJAX_MODE'] = 'Y';
+$componentParams['AJAX_OPTION_JUMP'] = 'N';
+$componentParams['AJAX_OPTION_HISTORY'] = 'N';
+$componentParams['AJAX_LOADER'] = $ajaxLoaderParams;
+//$componentParams["IFRAME"] = true;
+$APPLICATION->IncludeComponent('bitrix:crm.lead.list',
+    '',
+    $componentParams,
+    false,
+    array('HIDE_ICONS' => 'Y', 'ACTIVE_COMPONENT' => 'Y')
+    );
+
+?>
+
+
